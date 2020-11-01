@@ -14,9 +14,9 @@ LABEL org.label-schema.name="rPIFocus" \
     org.label-schema.version="${MAYOR_REVISION}.${MINOR_REVISION}.${BUILD_ID}"
 
 RUN apt-get update \
-    && apt-get install -y python3-dev python3-pip python3-setuptools python3-wheel python3-numpy python3-zmq \
-    libhdf5-dev libhdf5-serial-dev libhdf5-103 libqtgui4 libqtwebkit4 libqt4-test python3-pyqt5 python3-pil \
-    install -y --no-install-recommends build-essential feh pkg-config libjpeg-dev zlib1g-dev libssl-dev libffi-dev \
+    && apt-get install -y --no-install-recommends python3-dev python3-pip python3-setuptools python3-wheel \
+    python3-numpy python3-zmq libhdf5-dev libhdf5-serial-dev libhdf5-103 libqtgui4 libqtwebkit4 libqt4-test \
+    python3-pyqt5 python3-pil build-essential feh pkg-config libjpeg-dev zlib1g-dev libssl-dev libffi-dev \
     libraspberrypi0 libraspberrypi-dev libraspberrypi-doc libraspberrypi-bin libfreetype6-dev libxml2 libopenjp2-7 \
     libatlas-base-dev libjasper-dev libqtgui4 libqt4-test libavformat-dev libswscale-dev
 

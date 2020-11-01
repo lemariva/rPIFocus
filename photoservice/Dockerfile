@@ -15,7 +15,8 @@ LABEL org.label-schema.name="rPIFocus" \
 
 RUN apt-get update \
     && apt-get install -y python3-dev python3-pip python3-setuptools python3-wheel python3-numpy \
-    libhdf5-dev libhdf5-serial-dev libhdf5-103 libqtgui4 libqtwebkit4 libqt4-test python3-pyqt5 libraspberrypi-bin
+    libhdf5-dev libhdf5-serial-dev libhdf5-103 libqtgui4 libqtwebkit4 libqt4-test python3-pyqt5  \
+    libatlas-base-dev libjasper-dev libilmbase23 libopenexr-dev libraspberrypi-dev libraspberrypi-bin
 
 RUN python3 -m pip install --upgrade
 
