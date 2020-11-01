@@ -21,12 +21,12 @@ RUN mkdir -p /root/webapp/
 WORKDIR /root/webapp
 
 COPY ./app /root/webapp
-
 RUN npm install
 
-RUN node_modules/.bin/ng build
+RUN ln -s /root/webapp/node_modules/.bin/ng /usr/bin/ng
+RUN ng build
 
-CMD [ "node_modules/.bin/ng", "serve", "--host", "0.0.0.0" ]
+CMD [ "ng", "serve", "--host", "0.0.0.0" ]
 
 EXPOSE 4200
 
