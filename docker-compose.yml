@@ -1,0 +1,83 @@
+version: '3.7'
+services:
+
+  webapp:
+    image: lemariva/rpifocus-webapp
+    restart: unless-stopped
+    ports:
+      - 4200:4200
+    volumes:
+      - db-gallery:/root/webapp/src/photos/gallery
+      - db-raw:/root/webapp/src/photos/raw
+    networks:
+      - rpifocus
+
+  backend:
+    image: lemariva/rpifocus-backend
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - LD_LIBRARY_PATH=/opt/vc/lib
+      - PORT_OBJ_DETECTOR=8010
+      - HOST_PHOTO_SERVICE=http://photo-service:8005
+      - GALLERY_PATH=/mnt/gallery
+      - HOST_M5STACK=192.168.178.162
+    expose:
+      - 5000
+    volumes:
+      - /opt/vc:/opt/vc
+      - db-gallery:/mnt/gallery
+      - db-raw:/mnt/raw
+    devices:
+      - /dev/vcsm:/dev/vcsm
+      - /dev/vchiq:/dev/vchiq
+    networks:
+      - rpifocus
+
+  obj-detector:
+    image: lemariva/rpifocus-objdetector
+    restart: unless-stopped
+    environment:
+      - PORT_OBJ_DETECTOR=8010
+    expose:
+      - 8010
+    networks:
+      - rpifocus
+
+  photo-service:
+    image: lemariva/rpifocus-photoservice
+    restart: unless-stopped
+    privileged: true
+    environment:
+      - LD_LIBRARY_PATH=/opt/vc/lib
+      - PTMP_PATH=/mnt/ramdisk
+      - PHOTO_GALLERY_PATH=/mnt/gallery
+      - PHOTO_RAW_PATH=/mnt/raw
+      - HOST_REDIS=redis
+    expose:
+      - 8005
+    volumes:
+      - /opt/vc:/opt/vc
+      - /mnt/ramdisk:/mnt/ramdisk
+      - db-gallery:/mnt/gallery
+      - db-raw:/mnt/raw
+    devices:
+      - /dev/vcsm:/dev/vcsm
+      - /dev/vchiq:/dev/vchiq
+    networks:
+      - rpifocus
+
+  redis:
+    image: redis
+    container_name: cache
+    expose:
+      - 6379
+    networks:
+      - rpifocus
+
+volumes:
+  db-gallery:
+  db-raw:
+
+networks:
+  rpifocus:

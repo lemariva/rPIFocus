@@ -1,0 +1,47 @@
+.secondary {
+    color: rgba(0,0,0,0.54);
+}
+  
+[mat-fab] {
+    position: absolute;
+    right: 3%;
+    top: 34px;
+    z-index: 1;
+}
+
+mat-sidenav-layout {
+    background: rgba(0,0,0,0.03);
+}
+  
+mat-form-field {
+    margin: 0 5px 0 5px;
+    color: #1a242c;
+    background-color:#f7f7f7;
+}
+
+mat-slider {
+    width: 100%;
+    color: #1a242c;
+    background-color:#f7f7f7;
+}
+
+.mat-raised-button {
+    margin: 0 1px 0 1px;
+    min-width: 0px;
+    padding: 0px 10px;
+
+}
+
+mat-radio-button, mat-checkbox {
+    margin: 16px 8px;
+}
+
+
+mat-grid-list {
+    margin-top: 0px;
+}
+
+card-container {
+    display: flex;
+    flex-flow: row wrap;
+}

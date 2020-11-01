@@ -1,0 +1,119 @@
+
+<div class="container" fxLayout="row" fxLayout.lt-md="column" fxLayoutGap="20px">
+  <div class="cardWrap" fxLayout.lt-md="column" fxLayout.md="column"  fxLayout="row" fxFlex.md="50" fxLayoutAligmnet="space-between center" fxLayoutGap="20px" >
+    <mat-card class="camera"> 
+      <mat-card-header> 
+      </mat-card-header> 
+      <mat-card-content>
+          <img id="imgCanvas" [src]="ImagePath" style="width: 100%; height: 100%;" (click)="onClickBoxImage($event)"> 
+      </mat-card-content> 
+    </mat-card> 
+  </div>
+  <div class="cardWrap" fxLayout.lt-md="column" fxLayout.md="column"  fxLayout="row" fxFlex.md="50" fxLayoutAligmnet="space-between center" fxLayoutGap="20px" >
+    <mat-card class="settings">
+      <mat-card-header> 
+      </mat-card-header> 
+      <mat-card-content> 
+        <mat-list>
+          <mat-list-item> 
+            <mat-icon color="accent" mat-list-icon>camera</mat-icon>
+            <div mat-line></div>
+            <div mat-line>
+              <mat-slider min="0" max="{{camStatus.ma_max_steps}}" step="1" value="{{camStatus.ma_pos}}" (change)="onApertureChange($event)"></mat-slider> 
+            </div>
+          </mat-list-item>
+          <mat-list-item>  
+            <mat-icon color="accent" aria-hidden="false" mat-list-icon>emoji_nature</mat-icon>
+            <div *ngIf="!showFocusBox">
+              <div mat-line><mat-slider min="10" max="200" step="1" value="{{focusBoxSize}}" (change)="onFocusBoxSizeChange($event)"></mat-slider> </div>
+            </div>
+            <div *ngIf="!showFocusObject">
+              <div mat-line> {{focusObject.objects}} </div>
+            </div>
+            <div class="right-alignment">
+              <mat-button-toggle-group [value]="focusConfig.type" (change)="onFocusElementChange($event)">
+                <mat-button-toggle value="image">Frame</mat-button-toggle>
+                <mat-button-toggle value="box">Box</mat-button-toggle>
+                <mat-button-toggle *ngIf="showTpuEdge" value="object">Object</mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+          </mat-list-item>
+          <mat-list-item>
+            <mat-icon color="accent" mat-list-icon>center_focus_strong</mat-icon>
+            <div mat-line></div>
+            <div class="right-alignment">
+              <button mat-raised-button [color]="showFocusType == 1 ? 'accent' : 'primary'" (click)="onFocusModeClick($event)">Manual</button>
+              <button mat-raised-button [color]="showFocusType == 2 ? 'accent' : 'primary'" (click)="onFocusModeClick($event)">Auto</button>
+              <button mat-raised-button [color]="showFocusType == 3 ? 'accent' : 'primary'" (click)="onFocusModeClick($event)">Live</button>
+              <button mat-raised-button color="warn" (click)="onFocusModeClick($event)">Stop</button>
+            </div>
+          </mat-list-item>
+          <div *ngIf="showFocusType==1">
+            <mat-list-item> 
+              <div mat-line> </div>
+              <mat-slider min="20" max="{{camStatus.mf_max_steps}}" step="1" value="{{camStatus.mf_pos}}" (change)="onFocusSliderChange($event)"></mat-slider> 
+            </mat-list-item>
+          </div>
+          <form class="photo-form" [formGroup]="takePhotoConfig" (ngSubmit)="onSubmit(takePhotoConfig.value)">
+          <mat-list-item>
+            <mat-icon color="accent" mat-list-icon>settings_brightness</mat-icon>
+            <div mat-line></div>
+            <div class="right-alignment">
+              <mat-form-field class="width-25">
+                <mat-label>EV</mat-label>
+                <input matInput id="ev" min="-10" max="10" type="number" value="0" formControlName="ev">
+              </mat-form-field>
+              <mat-form-field class="width-25">
+                <mat-label>AEB</mat-label>
+                <select matNativeControl id="aeb" formControlName="aeb">
+                  <option value="0">0</option>
+                  <option value="1">2/3</option>
+                  <option value="2">1</option>
+                  <option value="3">1 1/2</option>
+                  <option value="4">1 2/3</option>
+                  <option value="5">2</option>
+                  <option value="6">2 1/3</option>
+                  <option value="7">2 2/3</option>
+                  <option value="8">3</option>
+                </select>
+              </mat-form-field>
+              <mat-form-field class="width-25">
+                <mat-label>ISO</mat-label>
+                <select matNativeControl id="iso" formControlName="iso">
+                  <option value="100">100</option>
+                  <option value="200">200</option>
+                  <option value="400">400</option>
+                  <option value="800">800</option>
+                </select>
+              </mat-form-field>
+              <mat-form-field class="width-25">
+                <mat-label>Exposure</mat-label>
+                <select matNativeControl id="exposure" formControlName="exposure">
+                  <option value="auto">auto</option>
+                  <option value="night">night</option>
+                  <option value="nightpreview">nightpreview</option>
+                  <option value="backlight">backlight</option>
+                  <option value="spotlight">spotlight</option>
+                  <option value="sports">sports</option>
+                  <option value="snow">snow</option>
+                  <option value="beach">beach</option>
+                  <option value="verylong">verylong</option>
+                  <option value="fixedfps">fixedfps</option>
+                  <option value="antishake">antishake</option>
+                  <option value="fireworks">fireworks</option>
+                </select>
+              </mat-form-field>
+            </div>
+          </mat-list-item>
+          <mat-list-item>
+            <div mat-line></div>
+            <div class="right-alignment">
+              <button mat-raised-button color="accent" class="button" type="submit">Take Photo</button>
+            </div>
+          </mat-list-item>
+        </form>
+          </mat-list>
+      </mat-card-content> 
+    </mat-card> 
+  </div>
+</div>

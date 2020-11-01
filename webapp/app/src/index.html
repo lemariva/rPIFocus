@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Raspberry Pi Camera</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+  <app></app>
+
+  <script>
+    var mousePosition;
+    document.addEventListener("DOMContentLoaded", function(){
+      var canvas = document.getElementById('imgCanvas');
+      function getMousePos(canvas, evt) {
+        var rect = canvas.getBoundingClientRect();
+        return {
+          x: (evt.clientX - rect.left) / rect.width,
+          y: (evt.clientY - rect.top) / rect.height
+        };
+      }
+      canvas.addEventListener('mousemove', function(evt) {
+        mousePosition = getMousePos(canvas, evt);
+      }, false);
+      canvas.addEventListener('touchmove', function(evt) {
+        mousePosition = getMousePos(canvas, evt);
+      }, false);
+    });
+  </script>
+</body>
+</html>
