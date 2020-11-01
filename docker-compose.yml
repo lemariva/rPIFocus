@@ -41,6 +41,8 @@ services:
       - PORT_OBJ_DETECTOR=8010
     expose:
       - 8010
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
     networks:
       - rpifocus
 
