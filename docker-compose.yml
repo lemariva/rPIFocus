@@ -2,26 +2,29 @@ version: '3.7'
 services:
 
   webapp:
-    image: lemariva/rpifocus-webapp
+    image: gcr.io/core-iot-sensors/rpifocus-webapp:1.0.0
     restart: unless-stopped
     ports:
       - 4200:4200
     volumes:
       - db-gallery:/root/webapp/src/photos/gallery
       - db-raw:/root/webapp/src/photos/raw
+    depends_on:
+      - backend
     networks:
       - rpifocus
 
   backend:
-    image: lemariva/rpifocus-backend
+    image: gcr.io/core-iot-sensors/rpifocus-backend:1.0.0
     restart: unless-stopped
     privileged: true
     environment:
       - LD_LIBRARY_PATH=/opt/vc/lib
+      - HOST_M5STACK=192.168.178.71
+      - HOST_OBJ_DETECTOR=obj-detector
       - PORT_OBJ_DETECTOR=8010
       - HOST_PHOTO_SERVICE=http://photo-service:8005
       - GALLERY_PATH=/mnt/gallery
-      - HOST_M5STACK=192.168.178.162
     expose:
       - 5000
     volumes:
@@ -31,14 +34,22 @@ services:
     devices:
       - /dev/vcsm:/dev/vcsm
       - /dev/vchiq:/dev/vchiq
+      - /dev/video0:/dev/video0
+    depends_on:
+      - obj-detector
+      - photo-service
     networks:
       - rpifocus
 
   obj-detector:
-    image: lemariva/rpifocus-objdetector
+    image: gcr.io/core-iot-sensors/rpifocus-objdetector:1.0.0
     restart: unless-stopped
+    privileged: true
     environment:
       - PORT_OBJ_DETECTOR=8010
+      - MODEL_PATH=data/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite
+      - LABELS_PATH=data/coco_labels.txt
+      - THRESHOLD=0.4
     expose:
       - 8010
     volumes:
@@ -47,15 +58,16 @@ services:
       - rpifocus
 
   photo-service:
-    image: lemariva/rpifocus-photoservice
+    image: gcr.io/core-iot-sensors/rpifocus-photoservice:1.0.0
     restart: unless-stopped
     privileged: true
     environment:
       - LD_LIBRARY_PATH=/opt/vc/lib
-      - PTMP_PATH=/mnt/ramdisk
+      - PHOTO_TMP_PATH=/mnt/ramdisk
       - PHOTO_GALLERY_PATH=/mnt/gallery
       - PHOTO_RAW_PATH=/mnt/raw
       - HOST_REDIS=redis
+      - PORT_RESTAPI=8005
     expose:
       - 8005
     volumes:
@@ -66,12 +78,15 @@ services:
     devices:
       - /dev/vcsm:/dev/vcsm
       - /dev/vchiq:/dev/vchiq
+      - /dev/video0:/dev/video0
+    depends_on:
+      - redis
     networks:
       - rpifocus
 
   redis:
     image: redis
-    container_name: cache
+    container_name: redis
     expose:
       - 6379
     networks:

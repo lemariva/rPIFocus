@@ -38,7 +38,7 @@ from os.path import isfile, join
 from blur_detection import dwt
 from blur_detection import estimate_blur
 
-m5stack_host = os.environ["HOST_M5STACK"]
+m5stack_host = None
 
 app = Flask(__name__)
 vc = WebcamVideoStream(src=0).start()
@@ -835,18 +835,23 @@ if __name__ == "__main__":
     assert sys.version_info >= (3, 6), sys.version_info
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--motor", default="192.168.178.71", help="IP from the ESP32 controlling the steppers"
+    )
+    parser.add_argument(
+        "--htpu", default="obj-detector", help="client host for object detector"
+    )
+    parser.add_argument(
         "--ptpu", type=int, default=8010, help="client port for object detector"
     )
     parser.add_argument(
-        "--photo", default="http://photo-service:8005", help="client port for take images"
+        "--photo", default="http://photo-service:8005", help="client restapi address for photo service"
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="set logging level to debug"
     )
 
     parser.add_argument(
-        "--pgallery", default="/mnt/gallery", 
-        help="folder to save gallery photos"
+        "--pgallery", default="/mnt/gallery", help="folder to save gallery photos"
     )
 
     args = parser.parse_args()
@@ -854,8 +859,10 @@ if __name__ == "__main__":
     level = logging.DEBUG if args.verbose else logging.INFO
     logging.basicConfig(level=level)
 
+    m5stack_host = args.motor
+
     try:
-        tpu_socket.connect(("localhost", args.ptpu))
+        tpu_socket.connect((args.htpu, args.ptpu))
         connection = tpu_socket.makefile("wb")
         tpu_api_detected = True
     except:
