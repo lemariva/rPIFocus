@@ -1,0 +1,2 @@
+opencv-contrib-python==4.1.0.25
+supervisor==4.2.1

@@ -14,13 +14,13 @@ LABEL org.label-schema.name="rPIFocus" \
     org.label-schema.version="${MAYOR_REVISION}.${MINOR_REVISION}.${BUILD_ID}"
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends python3-dev python3-pip python3-setuptools python3-wheel \
+    && apt-get install -y --no-install-recommends wget git python3-dev python3-pip python3-setuptools python3-wheel \
     python3-numpy python3-zmq libhdf5-dev libhdf5-serial-dev libhdf5-103 libqtgui4 libqtwebkit4 libqt4-test \
     python3-pyqt5 python3-pil build-essential feh pkg-config libjpeg-dev zlib1g-dev libssl-dev libffi-dev \
-    libraspberrypi0 libraspberrypi-dev libraspberrypi-doc libraspberrypi-bin libfreetype6-dev libxml2 libopenjp2-7 \
-    libatlas-base-dev libjasper-dev libqtgui4 libqt4-test libavformat-dev libswscale-dev
-
-RUN python3 -m pip install --upgrade
+    libraspberrypi0 libraspberrypi-dev libraspberrypi-bin libfreetype6-dev libxml2  libopenjp2-7 libatlas-base-dev \
+    libjasper-dev libopenexr-dev libilmbase23 libqtgui4 libqt4-test libavformat-dev libswscale-dev libavcodec-dev libv4l-dev
+    
+RUN python3 -m pip install --upgrade pip
 
 COPY ./app/requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
@@ -38,8 +38,19 @@ WORKDIR /root/app
 
 COPY ./app /root/app
 
+#copy supervisord files
+COPY "./conf/supervisord.conf" /etc/supervisor/conf.d/supervisord.conf
+RUN mkdir /var/log/supervisord/
+
 RUN apt-get autoremove \
     && rm -rf /tmp/* \
     && rm -rf /var/lib/apt/lists/*
 
-CMD ["python3",  "/root/app/restapi.py",  "--model", "/root/app/data/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite", "--label", "/root/app/data/coco_labels.txt"]
+#supervisord
+CMD ["/usr/local/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+
+EXPOSE 8010
+
+STOPSIGNAL SIGTERM
+
+RUN [ "cross-build-end" ]
