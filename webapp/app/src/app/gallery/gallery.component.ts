@@ -1,4 +1,3 @@
-
 /*
   Copyright (C) 2020 Mauro Riva
 
@@ -27,33 +26,33 @@ const SERVER_URL: string = '/photos/gallery/';
 
 @Component({
   template: `
-    <gallery [items]="images"></gallery>
+    <gallery [items]="images" thumbPosition="left"></gallery>
   `
 })
+
 export class GalleryComponent implements OnInit {
 
   images: GalleryItem[];
   private photoFiles: PhotoFiles[];
-
+  
   constructor(
-    private galleryService: GalleryService,
+    private galleryService: GalleryService
     ) {};
 
   ngOnInit() {
-    this.images = [];
+    
+    this.images = [
+      new ImageItem({ src: `${SERVER_URL}/icon.png`, thumb: `${SERVER_URL}/icon.png` }),
+    ];
+    
+    //console.log(this.images )
     this.galleryService.getPhotoFiles().subscribe((photoFiles) => {
       this.photoFiles = photoFiles;
       this.photoFiles.forEach(
           element =>
             this.images.push(new ImageItem({ src: `${SERVER_URL}${element["filename"]}`, thumb:`${SERVER_URL}${element["filename"]}`}))
-          );
+      );
 
     });
-
-    // Set gallery items array
-
-    
-    //
-
   }
 }
