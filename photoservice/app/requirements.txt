@@ -1,0 +1,8 @@
+imutils
+opencv-contrib-python==4.1.0.25
+Flask==1.1.2
+celery==5.0.1
+redis==3.5.3
+supervisor==4.2.1
+requests==2.24.0
+ExifRead==2.3.2
