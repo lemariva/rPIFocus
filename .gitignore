@@ -141,7 +141,7 @@ cython_debug/
 temp/
 
 #machine learning
-*.txt
+*labels.txt
 *.tflite
 
 # eagle backups

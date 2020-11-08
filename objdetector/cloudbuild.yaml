@@ -1,7 +1,7 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
   args: [ 'build', 
-          '-t', 'gcr.io/$PROJECT_ID/rpifocus-webapp:${_MAYOR_REVISION}.${_MINOR_REVISION}.${_BUILD_ID}', 
+          '-t', 'gcr.io/$PROJECT_ID/rpifocus-objdetector:${_MAYOR_REVISION}.${_MINOR_REVISION}.${_BUILD_ID}', 
           '--build-arg',
           'BUILD_ID=${_BUILD_ID}',
           '--build-arg',
@@ -10,9 +10,9 @@ steps:
           'MINOR_REVISION=${_MINOR_REVISION}',
           '.']
 substitutions:  # default values
-  _MAYOR_REVISION: "2"
-  _MINOR_REVISION: "2"
-  _BUILD_ID: "1"
+  _MAYOR_REVISION: "1"
+  _MINOR_REVISION: "0"
+  _BUILD_ID: "0"
 timeout: 5400s
 images:
 - 'gcr.io/$PROJECT_ID/rpifocus-objdetector'
