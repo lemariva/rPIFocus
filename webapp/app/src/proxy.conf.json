@@ -2,6 +2,7 @@
     "/api/*": {
         "target": "http://backend:5000",
         "secure": false,
-        "logLevel": "debug"
+        "logLevel": "info",
+        "changeOrigin": true
     }
 }
