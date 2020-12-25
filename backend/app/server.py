@@ -24,8 +24,6 @@ import socket
 import time
 import threading
 import requests
-import pickle
-import struct
 import numpy as np
 from flask import Flask, render_template, Response, request, jsonify
 from imutils.video import WebcamVideoStream
@@ -35,8 +33,18 @@ from datetime import datetime
 from os import listdir, makedirs, replace, remove
 from os.path import isfile, join
 
-from blur_detection import dwt
-from blur_detection import estimate_blur
+from motors import set_move_motor, get_motor_status
+from obj_detector import check_object_selected, classify_objects
+from focus import (
+    get_focus_score,
+    gaussian_fitting,
+    parabola_fitting,
+    fibs,
+    smallfib,
+    fib,
+)
+
+lock = threading.Lock()
 
 m5stack_host = None
 
@@ -45,10 +53,8 @@ vc = WebcamVideoStream(src=0).start()
 fps = FPS().start()
 
 frame = vc.read()
-frame_cut = frame
-
-_, frame_jpg = cv2.imencode(".JPEG", frame)
-frame_tmp = frame_jpg
+output_frame = frame.copy()
+focus_frame = frame.copy()
 
 focus_phase = 0
 focus_break = True
@@ -86,77 +92,14 @@ encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 90]
 # ############################################
 
 
-def getfocus(frame_focus):
-    if frame_focus.ndim == 3:
-        frame_focus = cv2.cvtColor(frame_focus, cv2.COLOR_BGR2GRAY)
-
-    score = dwt.low_res_score(frame_focus)
-    # _, score, _ = estimate_blur(frame_focus, threshold=100)
-    return score
-
-
-def gaussian_fitting(z, f):
-    """
-    Fit the autofocus function data according to the equation 16.5 in the
-    textbook : 'Microscope Image Processing' by Q.Wu et al'
-    z_max = gaussian_fitting((z1, z2, z3), (f1, f2 f3))
-    where z1, z2 , z3 are points where the autofocus functions
-    values f1, f2, f3 are measured
-    """
-    z1 = z[0]
-    z2 = z[1]
-    z3 = z[2]
-    f1 = f[0]
-    f2 = f[1]
-    f3 = f[2]
-
-    B = (np.log(f2) - np.log(f1)) / (np.log(f3) - np.log(f2))
-
-    if (z3 - z2) == (z2 - z1):
-        return 0.5 * (B * (z3 + z2) - (z2 + z1)) / (B - 1)
-    else:
-        return (
-            0.5
-            * (B * (z3 ** 2 - z2 ** 2) - (z2 ** 2 - z1 ** 2))
-            / (B * (z3 - z2) - (z2 - z1))
-        )
-
-
-def parabola_fitting(z, f):
-    """
-    Fit the autofocus function data according to the equation 16.5 in the
-    textbook : 'Microscope Image Processing' by Q.Wu et al'
-    parabola_fitting((z1, z2, z3), (f1, f2 f3))
-    where z1, z2 , z3 are points where the autofocus functions
-    values f1, f2, f3 are measured
-    """
-    z1 = z[0]
-    z2 = z[1]
-    z3 = z[2]
-    f1 = f[0]
-    f2 = f[1]
-    f3 = f[2]
-
-    E = (f2 - f1) / (f3 - f2)
-
-    if (z3 - z2) == (z2 - z1):
-        return 0.5 * (E * (z3 + z2) - (z2 + z1)) / (E - 1)
-    else:
-        return (
-            0.5
-            * (E * (z3 ** 2 - z2 ** 2) - (z2 ** 2 - z1 ** 2))
-            / (E * (z3 - z2) - (z2 - z1))
-        )
-
-
 def hill_climbing(step_size=300):
     """Climb to a higher place, find a smaller interval containing focus position
     (z1, z2, z3), (f1, f2, f3) = hill_climbing(f)
     """
-    global frame_cut
+    global focus_frame
     mtype = "focus"
 
-    f1 = getfocus(frame_cut)
+    f1 = get_focus_score(focus_frame)
     z1 = 0
     f2 = move_focus_motor(step_size, True)
     z2 = step_size
@@ -165,7 +108,6 @@ def hill_climbing(step_size=300):
     iterations = 0
 
     while True:
-
         if f2 > f1:
             f0 = f1
             f1 = f2
@@ -200,36 +142,7 @@ def fibonacci_search(interval):
     interval = (a, b)
     f is the microscope control class
     """
-    global frame_cut
-    phi = 0.5 * (1 + 5 ** 0.5)  # Golden ratio
-
-    def fibs(n=None):
-        """ A generator, (thanks to W.J.Earley) that returns the fibonacci series """
-        a, b = 0, 1
-        yield 0
-        yield 1
-        if n is not None:
-            for _ in range(1, n):
-                b = b + a
-                a = b - a
-                yield (b)
-        else:
-            while True:
-                b = b + a
-                a = b - a
-                yield (b)
-
-    def smallfib(m):
-        """ Return N such that fib(N) >= m """
-        n = 0
-        for fib in fibs(m):
-            if fib >= m:
-                return n
-            n = n + 1
-
-    def fib(n):
-        """ Evaluate the n'th fibonacci number """
-        return (phi ** n - (-phi) ** (-n)) / (5 ** 0.5)
+    global focus_frame
 
     a = interval[0]
     b = interval[1]
@@ -289,11 +202,25 @@ def fibonacci_search(interval):
 # ############################################
 
 
+def move_focus_motor(step_size, take_photo=False):
+    global focus_frame
+    mtype = "focus"
+    mdir = 0 if step_size < 0 else 1
+
+    while not set_move_motor(m5stack_host, mtype, abs(int(step_size)), mdir):
+        pass
+
+    if take_photo:
+        with lock:
+            time.sleep(0.1)
+            return get_focus_score(focus_frame)
+
+
 def autofocus():
-    global frame_cut, focus_phase, focus_break, score_history
+    global focus_frame, focus_break, score_history
     score_history = []
 
-    motor_status = get_motor_status("focus")
+    motor_status = get_motor_status(m5stack_host, "focus")
     max_steps = motor_status["max_steps"]
     actual_position = motor_status["position"]
 
@@ -337,13 +264,15 @@ def autofocus():
         f"max_steps: {max_steps} actual_position: {actual_position} move: {step_size}"
     )
 
-    score_history.append(getfocus(frame_cut))
+    score_history.append(get_focus_score(focus_frame))
     logging.info(f"score_x: {score_history[-1]}")
+
+    focus_break = True
 
 
 def livefocus():
     global focus_break
-    motor_status = get_motor_status("focus")
+    motor_status = get_motor_status(m5stack_host, "focus")
     max_steps = motor_status["max_steps"]
 
     autofocus()
@@ -367,7 +296,7 @@ def livefocus():
     swing = 0
 
     while not focus_break:
-        motor_status = get_motor_status("focus")
+        motor_status = get_motor_status(m5stack_host, "focus")
         max_steps = motor_status["max_steps"]
         actual_position = motor_status["position"]
 
@@ -404,13 +333,26 @@ def livefocus():
 # ############################################
 
 
-def gen():
+def generate():
     """Video streaming generator function."""
-    global frame_jpg
+    global output_frame, lock
     while True:
+        with lock:
+            # check if the output frame is available, otherwise skip
+            # the iteration of the loop
+            if output_frame is None:
+                continue
+
+            # encode the frame in JPEG format
+            flag, encoded_image = cv2.imencode(".jpg", output_frame)
+
+            # ensure the frame was successfully encoded
+            if not flag:
+                continue
+
         yield (
             b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + frame_jpg.tobytes() + b"\r\n"
+            b"Content-Type: image/jpeg\r\n\r\n" + bytearray(encoded_image) + b"\r\n"
         )
 
 
@@ -430,16 +372,16 @@ def restart_live_preview(task_id):
 
 
 def video_streaming():
-    global frame, frame_cut, frame_jpg, frame_tmp, focus_config, obj_detector, streaming_stop
+    global frame, output_frame, focus_frame, focus_config, obj_detector, focus_break
     t = threading.currentThread()
 
     while getattr(t, "do_run", True):
         frame = vc.read()
 
         if focus_config["focus_type"] == "image":
-            _, frame_jpg = cv2.imencode(".jpg", frame, encode_param)
-
-            frame_cut = frame
+            with lock:
+                output_frame = frame.copy()
+                focus_frame = frame.copy()
 
         elif focus_config["focus_type"] == "box":
             start_point = (focus_config["frame_x"], focus_config["frame_y"])
@@ -451,21 +393,19 @@ def video_streaming():
             color = color_selected
             thickness = 2
 
-            frame_cut = frame[
-                focus_config["frame_y"] : focus_config["frame_y"]
-                + focus_config["frame_h"],
-                focus_config["frame_x"] : focus_config["frame_x"]
-                + focus_config["frame_w"],
-            ]
-
-            frame_draw = cv2.rectangle(frame, start_point, end_point, color, thickness)
-            _, frame_jpg = cv2.imencode(".jpg", frame_draw, encode_param)
+            with lock:
+                focus_frame = frame[
+                    focus_config["frame_y"] : focus_config["frame_y"]
+                    + focus_config["frame_h"],
+                    focus_config["frame_x"] : focus_config["frame_x"]
+                    + focus_config["frame_w"],
+                ]
+                frame = cv2.rectangle(frame, start_point, end_point, color, thickness)
+                output_frame = frame.copy()
 
         elif focus_config["focus_type"] == "object":
-            _, frame_tmp = cv2.imencode(".jpg", frame, encode_param)
-
             if focus_break:
-                classify_objects()
+                classify_objects(tpu_socket, frame, obj_detector)
 
             cut_size = [len(frame), 0, len(frame[0]), 0]
 
@@ -493,122 +433,16 @@ def video_streaming():
                 if obj["y1"] > cut_size[3]:
                     cut_size[3] = obj["y1"]
 
-            if len(obj_detector) == 0:
-                frame_draw = frame
-                frame_cut = frame
-            else:
-                frame_cut = frame[cut_size[2] : cut_size[3], cut_size[0] : cut_size[1]]
-
-            _, frame_jpg = cv2.imencode(".jpg", frame_draw, encode_param)
+            with lock:
+                output_frame = frame.copy()
+                if len(obj_detector) == 0:
+                    focus_frame = frame.copy()
+                else:
+                    focus_frame = frame[
+                        cut_size[2] : cut_size[3], cut_size[0] : cut_size[1]
+                    ]
 
         fps.update()
-
-
-# ############################################
-# MOTORS
-# ############################################
-
-
-def set_move_motor(mtype, step, mdir):
-    try:
-        url = f"http://{m5stack_host}/move/{mtype}/{step}/{mdir}"
-        r = requests.get(url)
-        done = True if r.json()["status"] == "true" else False
-        position = r.json()["position"]
-    except:
-        done = False
-        position = 0
-
-    return done, position
-
-
-def move_focus_motor(step_size, take_photo=False):
-    global frame_cut
-    mtype = "focus"
-    mdir = 0 if step_size < 0 else 1
-
-    while not set_move_motor(mtype, abs(int(step_size)), mdir):
-        pass
-
-    if take_photo:
-        time.sleep(0.1)
-        return getfocus(frame_cut)
-
-
-def get_motor_status(mtype):
-    url = f"http://{m5stack_host}/status/{mtype}"
-    status = requests.get(url).json()
-    return status
-
-
-# ############################################
-# OBJECT DETECTION
-# ############################################
-
-
-def classify_objects():
-    global frame_tmp, obj_detector
-
-    data = b""
-    payload_size = struct.calcsize(">L")
-
-    # send image to classify
-    data_udp = pickle.dumps(frame_tmp, 0)
-    size_udp = len(data_udp)
-    tpu_socket.sendall(struct.pack(">L", size_udp) + data_udp)
-
-    # receive labels and coordinates
-    while len(data) < payload_size:
-        data += tpu_socket.recv(4096)
-
-    packed_msg_size = data[:payload_size]
-    data = data[payload_size:]
-    msg_size = struct.unpack(">L", packed_msg_size)[0]
-
-    while len(data) < msg_size:
-        data += tpu_socket.recv(4096)
-
-    labels_data = data[:msg_size]
-    data = data[msg_size:]
-
-    new_objs = pickle.loads(labels_data, fix_imports=True, encoding="bytes")
-
-    for obj in new_objs:
-        obj_temp = next(
-            (
-                (idx, item)
-                for idx, item in enumerate(obj_detector)
-                if item["label"] == obj["label"]
-            ),
-            False,
-        )
-        if not obj_temp:
-            obj["selected"] = False
-            obj["added"] = time.time_ns()
-            obj_detector.append(obj)
-        else:
-            obj_detector[obj_temp[0]]["x0"] = obj["x0"]
-            obj_detector[obj_temp[0]]["x1"] = obj["x1"]
-            obj_detector[obj_temp[0]]["y0"] = obj["y0"]
-            obj_detector[obj_temp[0]]["y1"] = obj["y1"]
-            obj_detector[obj_temp[0]]["added"] = time.time_ns()
-
-    for idx, obj in enumerate(obj_detector):
-        if obj["added"] < time.time_ns() - 2e9:
-            obj_detector.pop(idx)
-
-
-def check_object_selected():
-    global obj_detector
-    for idx, obj in enumerate(obj_detector):
-        if (
-            obj["x0"] < focus_config["frame_x"]
-            and obj["x1"] > focus_config["frame_x"]
-            and obj["y0"] < focus_config["frame_y"]
-            and obj["y1"] > focus_config["frame_y"]
-        ):
-
-            obj_detector[idx]["selected"] = not obj_detector[idx]["selected"]
 
 
 # ############################################
@@ -625,7 +459,7 @@ def index():
 @app.route("/api/video_feed")
 def api_video_feed():
     """Video streaming route. Put this in the src attribute of an img tag."""
-    return Response(gen(), mimetype="multipart/x-mixed-replace; boundary=frame")
+    return Response(generate(), mimetype="multipart/x-mixed-replace; boundary=frame")
 
 
 @app.route("/api/frame")
@@ -668,7 +502,7 @@ def api_focus_object():
         focus_config["frame_x"] = int(request.args.get("x"))
         focus_config["frame_y"] = int(request.args.get("y"))
 
-    check_object_selected()
+    check_object_selected(focus_config, obj_detector)
 
     objects = ""
     for obj in obj_detector:
@@ -723,13 +557,13 @@ def api_autofocus():
 @app.route("/api/status")
 def api_app_status():
 
-    aperture_status = get_motor_status("aperture")
+    aperture_status = get_motor_status(m5stack_host, "aperture")
 
     ma_pos = aperture_status["position"]
     ma_calibrated = aperture_status["calibrated"]
     ma_max_steps = aperture_status["max_steps"]
 
-    focus_status = get_motor_status("focus")
+    focus_status = get_motor_status(m5stack_host, "focus")
 
     mf_pos = focus_status["position"]
     mf_calibrated = focus_status["calibrated"]
@@ -757,7 +591,7 @@ def api_set_move_motor():
         mtype = request.args.get("mtype")
         position = int(request.args.get("position"))
 
-        motor_status = get_motor_status(mtype)
+        motor_status = get_motor_status(m5stack_host, mtype)
         max_steps = motor_status["max_steps"]
         actual_position = motor_status["position"]
 
@@ -771,7 +605,7 @@ def api_set_move_motor():
 
         logging.info(f"mtype: {mtype} step_size: {step_size} mdir: {mdir}")
 
-        motor_status = set_move_motor(mtype, abs(step_size), mdir)
+        motor_status = set_move_motor(m5stack_host, mtype, abs(step_size), mdir)
 
         return jsonify(motor_status), 200
 
@@ -807,7 +641,6 @@ def api_take_photo():
             )
         )
 
-
         data = requests.get(request_link)
         task_id = data.json()["task_id"]
 
@@ -816,6 +649,7 @@ def api_take_photo():
 
     return jsonify(data.json()), 200
 
+
 @app.route("/api/getphotos")
 def api_get_photos():
     pgal = args.pgallery
@@ -823,10 +657,8 @@ def api_get_photos():
 
     data = []
     for file in onlyfiles:
-        if file.endswith('.jpg'):
-            data.append( {
-                "filename": file
-            })
+        if file.endswith(".jpg"):
+            data.append({"filename": file})
 
     return jsonify(data), 200
 
@@ -835,7 +667,9 @@ if __name__ == "__main__":
     assert sys.version_info >= (3, 6), sys.version_info
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--motor", default="192.168.178.71", help="IP from the ESP32 controlling the steppers"
+        "--motor",
+        default="192.168.178.71",
+        help="IP from the ESP32 controlling the steppers",
     )
     parser.add_argument(
         "--htpu", default="obj-detector", help="client host for object detector"
@@ -844,7 +678,9 @@ if __name__ == "__main__":
         "--ptpu", type=int, default=8010, help="client port for object detector"
     )
     parser.add_argument(
-        "--photo", default="http://photo-service:8005", help="client restapi address for photo service"
+        "--photo",
+        default="http://photo-service:8005",
+        help="client restapi address for photo service",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true", help="set logging level to debug"
