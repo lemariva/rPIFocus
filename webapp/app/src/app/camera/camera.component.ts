@@ -98,7 +98,7 @@ export class CameraComponent implements OnInit {
       private formBuilder: FormBuilder,
       private storageService: SharingService
       ) {
-        this.ImagePath = '/api/video_feed';
+        this.ImagePath = "http://" + location.hostname  + ":5000/api/video_feed";
         this.takePhotoConfig = this.formBuilder.group({
           ev: this.photoConfig[0].ev,
           aeb: this.photoConfig[0].aeb,
