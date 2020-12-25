@@ -34,7 +34,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", help="File path of Tflite model.", required=True)
     parser.add_argument("--label", help="File path of label file.", required=True)
-    parser.add_argument("--top_k", type=int, default=3, help="number of classes with highest score to display")
+    parser.add_argument("--top_k", type=int, default=5, help="number of classes with highest score to display")
     parser.add_argument("--threshold", type=float, default=0.4, help="class score threshold")
     parser.add_argument("--port", type=int, default=8010, help="server port for images")
     parser.add_argument("-v", "--verbose", action="store_true", help="set logging level to debug")
@@ -74,10 +74,10 @@ if __name__ == "__main__":
         pil_im = Image.fromarray(frame)
         objs = engine.detect_with_image(
             pil_im,
-            threshold=args.threshold,
+            threshold=float(args.threshold),
             keep_aspect_ratio=True,
             relative_coord=True,
-            top_k=args.top_k,
+            top_k=int(args.top_k),
         )
 
         height, width, channels = frame.shape

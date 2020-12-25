@@ -49,7 +49,8 @@ services:
       - PORT_OBJ_DETECTOR=8010
       - MODEL_PATH=data/mobilenet_ssd_v2_coco_quant_postprocess_edgetpu.tflite
       - LABELS_PATH=data/coco_labels.txt
-      - THRESHOLD=0.4
+      - THRESHOLD=0.3
+      - TOP_K=5
     expose:
       - 8010
     volumes:
