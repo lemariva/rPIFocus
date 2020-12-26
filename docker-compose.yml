@@ -25,6 +25,8 @@ services:
       - PORT_OBJ_DETECTOR=8010
       - HOST_PHOTO_SERVICE=http://photo-service:8005
       - GALLERY_PATH=/mnt/gallery
+    ports:
+      - 5000:5000
     expose:
       - 5000
     volumes:
@@ -87,6 +89,7 @@ services:
 
   redis:
     image: redis
+    restart: unless-stopped
     container_name: redis
     expose:
       - 6379
