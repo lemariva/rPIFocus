@@ -73,10 +73,12 @@ The Docker images can be built by typing e.g.:
 ```sh
 docker build -t <your-docker-hub-name>/rpifocus-webapp:1.0.0 webapp
 ```
-Then, if you are logged in into Docker Hub, you can push the image:
+Then, if you are logged in into Docker Hub, you can push the image by typing:
 ```sh
-docker push <your-docker-hub-name>/rpifocus-webapp:1.0.0
+docker push <your-docker-hub-name>/webapp
+# read this tutorial: https://docs.docker.com/docker-hub/access-tokens/#create-an-access-token for login
 ```
+
 Then, you need to edit the image names inside the `docker-compose.yml` and start the microservices application again (`docker-compose down` and then `docker-compose up -d`).
 
 Additionally, I included a `cloudbuild.yaml` file inside each folder. This can be used to build those images using Google Cloud Build. In this article: [M5Stack: Fresh air checker can help you to stay safe from #COVID-19](https://lemariva.com/blog/2020/11/m5stack-fresh-air-helps-stay-safe-from-covid-19), you can find an example of how to do that!
