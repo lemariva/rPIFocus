@@ -2,7 +2,8 @@ version: '3.7'
 services:
 
   webapp:
-    image: gcr.io/core-iot-sensors/rpifocus-webapp:1.0.0
+    #image: gcr.io/core-iot-sensors/rpifocus-webapp:1.0.0
+    image: lemariva/rpifocus-webapp:1.0.0
     restart: unless-stopped
     ports:
       - 4200:4200
@@ -15,7 +16,8 @@ services:
       - rpifocus
 
   backend:
-    image: gcr.io/core-iot-sensors/rpifocus-backend:1.0.0
+    #image: gcr.io/core-iot-sensors/rpifocus-backend:1.0.0
+    image: lemariva/rpifocus-backend:1.0.0
     restart: unless-stopped
     privileged: true
     environment:
@@ -44,7 +46,8 @@ services:
       - rpifocus
 
   obj-detector:
-    image: gcr.io/core-iot-sensors/rpifocus-objdetector:1.0.0
+    #image: gcr.io/core-iot-sensors/rpifocus-objdetector:1.0.0
+    image: lemariva/rpifocus-objdetector:1.0.0
     restart: unless-stopped
     privileged: true
     environment:
@@ -61,7 +64,8 @@ services:
       - rpifocus
 
   photo-service:
-    image: gcr.io/core-iot-sensors/rpifocus-photoservice:1.0.0
+    #image: gcr.io/core-iot-sensors/rpifocus-photoservice:1.0.0
+    image: lemariva/rpifocus-photoservice:1.0.0
     restart: unless-stopped
     privileged: true
     environment:
