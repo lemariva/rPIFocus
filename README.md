@@ -1,6 +1,6 @@
 # Autofocus for the 16mm telephoto lens mounted on a Raspberry Pi HQ Camera.
-As you may have already noticed, the Raspberry Pi HQ Camera lenses don't have any autofocus functionality. This project includes the hardware design and software to add autofocus functionality to those lenses in this case to the 16mm telephoto lens.
-The project is divided into two repositories. This repository includes the code of the Microservice Application, whereas [lemariva/uPyFocus](https://github.com/lemariva/uPyFocus) includes the firmware for the M5Stack that controls the motors to rotate the Lens focus and aperture.
+As you may have already noticed, the Raspberry Pi HQ Camera lenses don't have any autofocus functionality. This project includes the hardware design, firmware and software to add autofocus functionality to those lenses. In this case, I use the 16mm telephoto lens.
+The project is divided into two repositories. This repository includes the code of the Microservice application, whereas [lemariva/uPyFocus](https://github.com/lemariva/uPyFocus) includes the firmware for the M5Stack that controls the motors to rotate the Lens focus and aperture.
 
 A detailed article about the application can be found on [Raspberry Pi HQ Camera: Autofocus for the Telephoto Lens (JiJi)](https://lemariva.com/blog/2020/12/raspberry-pi-hq-camera-autofocus-telephoto-lens).
 
@@ -14,7 +14,7 @@ A detailed article about the application can be found on [Raspberry Pi HQ Camera
 |Focus Type: Box <br/> Background focused (<a href="https://lemariva.com/storage/app/media/blog_imgs/hqcamera/hq_camera_background_focused.jpg">download</a>)|Focus Type: Box <br/>Nanoblock bird focused (<a href="https://lemariva.com/storage/app/media/blog_imgs/hqcamera/hq_camera_nanoblock_bird_focused.jpg">download</a>)|Focus Type: Box <br/>Nanoblock bird focused. <br/> Diff. illum & cam. aperture (<a href="https://lemariva.com/storage/app/media/blog_imgs/hqcamera/hq_camera_nanoblock_bird_focused_2.jpg">download</a>)|Focus Type: Object detector  <br/>Teddy bear focused (<a href="https://lemariva.com/storage/app/media/blog_imgs/hqcamera/hq_camera_teddy_bear_focused.jpg">download</a>)|
 
 ## Simple PCB schematic
-Inside the folder `pcb`, you'll find the board and schematic files (Eagle), to order your PCB. I added also the Gerber files that I used by <a rel="noopener noreferrer" href="https://jlcpcb.com/">jlcpcb</a>.
+Inside the folder `pcb`, you'll find the board design and schematic files (Eagle), to order the PCB. I added also the Gerber files that I used by <a rel="noopener noreferrer" href="https://jlcpcb.com/">jlcpcb</a>.
 
 |          |
 |:--------:|
@@ -22,7 +22,7 @@ Inside the folder `pcb`, you'll find the board and schematic files (Eagle), to o
 |Simple PCB schematic.|
 
 ## Start the Microservices Application
-The application that runs on the Raspberry Pi is a microservices application. That means different services are orchestrated to offer an application. The orchestration is performed by docker-compose and the services are containerized using Docker.
+The application that runs on the Raspberry Pi is a Microservices application. That means different services are orchestrated to offer an application. The orchestration is performed by docker-compose and the services are containerized using Docker.
 
 To install Docker and `docker-compose` on the Raspberry Pi, type the following on a Terminal:
 ```
