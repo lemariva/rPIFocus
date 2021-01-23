@@ -26,12 +26,10 @@ COPY ./app/requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt
 
 RUN echo "deb https://packages.cloud.google.com/apt coral-edgetpu-stable main" | sudo tee /etc/apt/sources.list.d/coral-edgetpu.list \
+    && echo "deb https://packages.cloud.google.com/apt coral-cloud-stable main" | sudo tee /etc/apt/sources.list.d/coral-cloud.list \
     && curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add - \
     && apt-get update \
-    && apt-get install -y python3-edgetpu \
-    && wget https://dl.google.com/coral/python/tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl \
-    && pip3 install tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl \
-    && rm tflite_runtime-2.1.0.post1-cp37-cp37m-linux_armv7l.whl
+    && apt-get install -y python3-pycoral python3-tflite-runtime
 
 RUN mkdir /root/app 
 WORKDIR /root/app

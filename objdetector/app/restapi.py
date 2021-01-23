@@ -23,8 +23,12 @@ import numpy as np
 import argparse
 import struct
 import zlib
-from PIL import Image
-from edgetpu.detection.engine import DetectionEngine
+
+from pycoral.adapters.common import input_size
+from pycoral.adapters.detect import get_objects
+from pycoral.utils.dataset import read_label_file
+from pycoral.utils.edgetpu import make_interpreter
+from pycoral.utils.edgetpu import run_inference
 
 HOST = ""
 
@@ -33,19 +37,29 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", help="File path of Tflite model.", required=True)
-    parser.add_argument("--label", help="File path of label file.", required=True)
-    parser.add_argument("--top_k", type=int, default=5, help="number of classes with highest score to display")
-    parser.add_argument("--threshold", type=float, default=0.4, help="class score threshold")
+    parser.add_argument("--labels", help="File path of label file.", required=True)
+    parser.add_argument(
+        "--top_k",
+        type=int,
+        default=3,
+        help="number of classes with highest score to display",
+    )
+    parser.add_argument(
+        "--threshold", type=float, default=0.4, help="class score threshold"
+    )
     parser.add_argument("--port", type=int, default=8010, help="server port for images")
-    parser.add_argument("-v", "--verbose", action="store_true", help="set logging level to debug")
+    parser.add_argument(
+        "-v", "--verbose", action="store_true", help="set logging level to debug"
+    )
 
     args = parser.parse_args()
 
-    with open(args.label, "r") as f:
-        pairs = (l.strip().split(maxsplit=1) for l in f.readlines())
-        labels = dict((int(k), v) for k, v in pairs)
+    interpreter = make_interpreter(args.model)
+    interpreter.allocate_tensors()
+    labels = read_label_file(args.labels)
+    inference_size = input_size(interpreter)
 
-    engine = DetectionEngine(args.model)
+    labels = read_label_file(args.labels)
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((HOST, args.port))
@@ -69,32 +83,25 @@ if __name__ == "__main__":
         data = data[msg_size:]
 
         frame = pickle.loads(frame_data, fix_imports=True, encoding="bytes")
-        frame = cv2.imdecode(frame, cv2.IMREAD_COLOR)
-
-        pil_im = Image.fromarray(frame)
-        objs = engine.detect_with_image(
-            pil_im,
-            threshold=float(args.threshold),
-            keep_aspect_ratio=True,
-            relative_coord=True,
-            top_k=int(args.top_k),
-        )
-
+        frame = cv2.imdecode(frame, cv2.COLOR_BGR2RGB)
         height, width, channels = frame.shape
+
+        frame = cv2.resize(frame, inference_size)
+        run_inference(interpreter, frame.tobytes())
+        objs = get_objects(interpreter, args.threshold)[: args.top_k]
+
+        scale_x, scale_y = width / inference_size[0], height / inference_size[1]
 
         ret_array = []
         for obj in objs:
             ret = {}
-            x0, y0, x1, y1 = obj.bounding_box.flatten().tolist()
-            x0, y0, x1, y1 = (
-                int(x0 * width),
-                int(y0 * height),
-                int(x1 * width),
-                int(y1 * height),
-            )
+
+            bbox = obj.bbox.scale(scale_x, scale_y)
+            x0, y0 = int(bbox.xmin), int(bbox.ymin)
+            x1, y1 = int(bbox.xmax), int(bbox.ymax)
+
             percent = int(100 * obj.score)
-            label = "%d%% %s" % (percent, labels[obj.label_id])
-            ret["label"] = labels[obj.label_id]
+            ret["label"] = labels.get(obj.id, obj.id)
             ret["percent"] = percent
             ret["x0"] = x0
             ret["x1"] = x1
